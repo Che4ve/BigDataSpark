@@ -1,0 +1,6 @@
+postgres/data/csv/
+spark/jars/
+spark/__pycache__/
+*.pyc
+.env
+

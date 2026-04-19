@@ -1,0 +1,69 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_HOST_PORT}:5432"
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./postgres/data/csv:/csv-data:ro
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - bigdata-net
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3
+    ports:
+      - "${CLICKHOUSE_HTTP_HOST_PORT}:8123"
+      - "${CLICKHOUSE_NATIVE_HOST_PORT}:9000"
+    volumes:
+      - ./clickhouse/init:/docker-entrypoint-initdb.d:ro
+      - clickhouse_data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --query 'SELECT 1' >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - bigdata-net
+
+  spark-master:
+    image: apache/spark:4.0.2-scala2.13-java17-python3-r-ubuntu
+    command: ["/bin/bash", "-lc", "sleep infinity"]
+    environment:
+      PYSPARK_PYTHON: python3
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      CLICKHOUSE_HOST: ${CLICKHOUSE_HOST}
+      CLICKHOUSE_HTTP_PORT: ${CLICKHOUSE_HTTP_PORT}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    volumes:
+      - ./spark:/opt/spark-jobs
+    networks:
+      - bigdata-net
+
+networks:
+  bigdata-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  clickhouse_data:
