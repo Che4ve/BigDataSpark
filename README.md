@@ -78,6 +78,12 @@ docker compose up -d postgres clickhouse spark-master
 
 Все переменные лежат в `.env`.
 
+Если файла нет, создайте его из шаблона:
+
+```bash
+cp .env.example .env
+```
+
 Доступ с хоста:
 
 - PostgreSQL: `localhost:15432`
